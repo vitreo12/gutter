@@ -1,0 +1,5 @@
+gain 0 3.5
+damp 0 1.0
+mod 0.0 > 1.0 | squared * 10
+rate 0.0 > 1.0 | squared > squared * 5
+q 0.0 > 1.0 | squared > squared | 0.5 > 400

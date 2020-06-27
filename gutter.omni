@@ -1,0 +1,11 @@
+require "gutterOsc.omni"
+
+ins 8
+
+outs 2
+
+init:  
+  gutterOsc = initGutterOsc()
+
+sample:
+  out1 = in1

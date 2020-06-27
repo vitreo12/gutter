@@ -1,0 +1,146 @@
+struct Buffer:
+    in_num
+  
+struct GutterOsc:
+    filterFreqsArray Buffer
+    prevX1 Data[Data[float]]
+    prevX2 Data[Data[float]]
+    prevY1 Data[Data[float]]
+    prevY2 Data[Data[float]]
+    V Data[Data[float]]
+    K Data[Data[float]]
+    norm Data[Data[float]]
+    a0 Data[Data[float]]
+    a1 Data[Data[float]]
+    a2 Data[Data[float]]
+    b1 Data[Data[float]]
+    b2 Data[Data[float]]
+    y Data[Data[float]]
+
+    bankCount int
+    filterCount int
+    filtersOn bool
+    singleGain float
+    smoothing int
+
+    duffX; duffY; dx; dy; gamma; omega; c; t; dt
+  
+def calcCoeffs(gutterOsc):
+    for i in 0..gutterOsc.bankCount - 1:
+        for j in 0..gutterOsc.filterCount - 1:
+            gutterOsc.V[i][j] = pow(10, 1.0 / 20)
+            gutterOsc.K[i][j] = tan(PI * gutterOsc.filterFreqsArray[i, j] / sampleRate)
+            gutterOsc.norm[i][j] = 1 / (1 + gutterOsc.K[i][j] / gutterOsc.Q[j] + gutterOsc.K[i][j] * gutterOsc.K[i][j])
+            gutterOsc.a0[i][j] = gutterOsc.K[i][j] / gutterOsc.Q[i] * gutterOsc.norm[i][j]
+            gutterOsc.a1[i][j] = 0
+            gutterOsc.a2[i][j] = -(a0[i][j])
+            gutterOsc.b1[i][j] = 2 * (gutterOsc.K[i][j] * gutterOsc.K[i][j] - 1) * gutterOsc.norm[i][j]
+            gutterOsc.b2[i][j] = (1 - gutterOsc.K[i][j] / gutterOsc.Q[i] + gutterOsc.K[i][j] * gutterOsc.K[i][j]) * gutterOsc.norm[i][j]
+  
+def initGutterOsc():
+    bankC = 2
+    filterC = 24
+
+    filterFreqsArray = Buffer(1)
+    Q = Buffer(2)
+    gains = Buffer(3)
+
+    prevX1 = Data[Data[float]](bankC);  prevX2 = Data[Data[float]](bankC)
+    prevY1 = Data[Data[float]](bankC);  prevY2 = Data[Data[float]](bankC)
+    V = Data[Data[float]](bankC);  K = Data[Data[float]](bankC);  norm = Data[Data[float]](bankC)
+    a0 = Data[Data[float]](bankC); a1 = Data[Data[float]](bankC);  a2 = Data[Data[float]](bankC)
+    b1 = Data[Data[float]](bankC); b2 = Data[Data[float]](bankC)
+    y = Data[Data[float]](bankC)
+
+    for i in 0..bankC-1:
+        prevX1[i] = Data(filterC); prevX2[i] = Data(filterC)
+        prevY1[i] = Data(filterC); prevY2[i] = Data(filterC)
+        V[i] = Data(filterC);  K[i] = Data(filterC);  norm[i] = Data(filterC)
+        a0[i] = Data(filterC); a1[i] = Data(filterC);  a2[i] = Data(filterC)
+        b1[i] = Data(filterC); b2[i] = Data(filterC)
+        y[i] = Data(filterC)
+
+    for i in 0..bankC-1:
+        if i == 0:
+            gains[i] = 1
+        else:
+            gains[i] = 0
+        for j in 0..filterC-1:
+            filterFreqsArray[i, j] = (j / 2.0) * 20 * (i + 1) * 1.2 + 80
+
+    gutterOsc = GutterOsc(
+        filterFreqsArray,
+        Q,
+        gains,
+        prevX1,
+        prevX2,
+        prevY1,
+        prevY2,
+        V,
+        K,
+        norm,
+        a0,
+        a1,
+        a2,
+        b1,
+        b2,
+        y,
+        bankC,
+        filterC,
+        true,
+        0.0,
+        1,
+        0,
+        0,
+        0,
+        0.1,
+        1.25,
+        0.3,
+        0,
+        1
+    )
+
+    #initTempArrays(bankCount, filterCount);
+    #for (int j=0; j<filterCount; j++) {  Q[j] = 30; QTemp[j] = 30;  }  
+
+    gutterOsc.calcCoeffs()
+
+    return gutterOsc
+  
+#[
+# PERFORM BLOCK
+gamma = ins[0].vec[i];  omega = ins[1].vec[i]; c = ins[2].vec[i]; dt = ins[3].vec[i]; singleGain = ins[4].vec[i];
+audioInput = ins[5].vec[i];
+gains[0] = ins[6].vec[i];      // gains need to be signal inputs...
+gains[1] = ins[7].vec[i];      // Note that this fixes the max at two for the moment.
+
+for i in 0..bankCount - 1:
+    for j in 0..filterCount:
+    y[i][j] = a0[i][j] * duffX + a1[i][j]*prevX1[i][j] + a2[i][j] * prevX2[i][j] - b1[i][j] * prevY1[i][j] - b2[i][j] * prevY2[i][j];
+    prevX2[i][j] = prevX1[i][j];
+    prevX1[i][j] = duffX;
+    prevY2[i][j] = prevY1[i][j];
+    prevY1[i][j] = y[i][j];
+    finalY += y[i][j] * gains[i] * singleGain
+
+dy = finalY - (finalY*finalY*finalY) - (c*duffY) + gamma * sin(omega * t);   
+
+duffY += dy;
+dx = duffY;
+duffX = lowpass(finalY+dx, duffX, smoothing);
+
+duffX = distortion(duffX, distMethod);
+
+# outputs 
+out1 = (finalY * 0.125);  // output the value from the filter, not from the distortion
+out2 = duffX
+
+t += dt
+]#
+
+
+
+            
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
