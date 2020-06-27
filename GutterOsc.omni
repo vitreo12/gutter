@@ -1,8 +1,7 @@
-struct Buffer:
-    in_num
-  
 struct GutterOsc:
     filterFreqsArray Buffer
+    Q Buffer
+    gains Buffer
     prevX1 Data[Data[float]]
     prevX2 Data[Data[float]]
     prevY1 Data[Data[float]]
@@ -33,7 +32,7 @@ def calcCoeffs(gutterOsc):
             gutterOsc.norm[i][j] = 1 / (1 + gutterOsc.K[i][j] / gutterOsc.Q[j] + gutterOsc.K[i][j] * gutterOsc.K[i][j])
             gutterOsc.a0[i][j] = gutterOsc.K[i][j] / gutterOsc.Q[i] * gutterOsc.norm[i][j]
             gutterOsc.a1[i][j] = 0
-            gutterOsc.a2[i][j] = -(a0[i][j])
+            gutterOsc.a2[i][j] = -(gutterOsc.a0[i][j])
             gutterOsc.b1[i][j] = 2 * (gutterOsc.K[i][j] * gutterOsc.K[i][j] - 1) * gutterOsc.norm[i][j]
             gutterOsc.b2[i][j] = (1 - gutterOsc.K[i][j] / gutterOsc.Q[i] + gutterOsc.K[i][j] * gutterOsc.K[i][j]) * gutterOsc.norm[i][j]
   
@@ -106,41 +105,41 @@ def initGutterOsc():
     gutterOsc.calcCoeffs()
 
     return gutterOsc
+    
+  #[
+  # PERFORM BLOCK
+  gamma = ins[0].vec[i];  omega = ins[1].vec[i]; c = ins[2].vec[i]; dt = ins[3].vec[i]; singleGain = ins[4].vec[i];
+  audioInput = ins[5].vec[i];
+  gains[0] = ins[6].vec[i];      // gains need to be signal inputs...
+  gains[1] = ins[7].vec[i];      // Note that this fixes the max at two for the moment.
   
-#[
-# PERFORM BLOCK
-gamma = ins[0].vec[i];  omega = ins[1].vec[i]; c = ins[2].vec[i]; dt = ins[3].vec[i]; singleGain = ins[4].vec[i];
-audioInput = ins[5].vec[i];
-gains[0] = ins[6].vec[i];      // gains need to be signal inputs...
-gains[1] = ins[7].vec[i];      // Note that this fixes the max at two for the moment.
-
-for i in 0..bankCount - 1:
-    for j in 0..filterCount:
-    y[i][j] = a0[i][j] * duffX + a1[i][j]*prevX1[i][j] + a2[i][j] * prevX2[i][j] - b1[i][j] * prevY1[i][j] - b2[i][j] * prevY2[i][j];
-    prevX2[i][j] = prevX1[i][j];
-    prevX1[i][j] = duffX;
-    prevY2[i][j] = prevY1[i][j];
-    prevY1[i][j] = y[i][j];
-    finalY += y[i][j] * gains[i] * singleGain
-
-dy = finalY - (finalY*finalY*finalY) - (c*duffY) + gamma * sin(omega * t);   
-
-duffY += dy;
-dx = duffY;
-duffX = lowpass(finalY+dx, duffX, smoothing);
-
-duffX = distortion(duffX, distMethod);
-
-# outputs 
-out1 = (finalY * 0.125);  // output the value from the filter, not from the distortion
-out2 = duffX
-
-t += dt
-]#
-
-
-
-            
-
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+  for i in 0..bankCount - 1:
+      for j in 0..filterCount:
+      y[i][j] = a0[i][j] * duffX + a1[i][j]*prevX1[i][j] + a2[i][j] * prevX2[i][j] - b1[i][j] * prevY1[i][j] - b2[i][j] * prevY2[i][j];
+      prevX2[i][j] = prevX1[i][j];
+      prevX1[i][j] = duffX;
+      prevY2[i][j] = prevY1[i][j];
+      prevY1[i][j] = y[i][j];
+      finalY += y[i][j] * gains[i] * singleGain
+  
+  dy = finalY - (finalY*finalY*finalY) - (c*duffY) + gamma * sin(omega * t);   
+  
+  duffY += dy;
+  dx = duffY;
+  duffX = lowpass(finalY+dx, duffX, smoothing);
+  
+  duffX = distortion(duffX, distMethod);
+  
+  # outputs 
+  out1 = (finalY * 0.125);  // output the value from the filter, not from the distortion
+  out2 = duffX
+  
+  t += dt
+  ]#
+  
+  
+  
+              
+  
+  
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
